@@ -1,0 +1,13 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+Flask-JWT-Extended
+Flask-WTF
+Werkzeug
+PyJWT
+python-dotenv
+redis
+celery
+flask_login
+flask_caching
+weasyprint

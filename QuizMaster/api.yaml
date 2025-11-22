@@ -1,0 +1,1422 @@
+openapi: 3.0.0
+info:
+  title: Quiz Application API
+  version: 1.0.0
+  description: API endpoints for AI content generation, quiz export, and report downloads.
+
+paths:
+  /generate_ai_content:
+    post:
+      summary: Generate AI Content
+      description: Generates AI-based content on a given topic.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic:
+                  type: string
+                  description: The topic to generate content for.
+      responses:
+        "200":
+          description: Successfully generated content.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  topic:
+                    type: string
+                  content:
+                    type: string
+        "400":
+          description: Bad request - missing topic.
+        "500":
+          description: Internal server error.
+
+  /export_quiz_csv:
+    post:
+      summary: Export Quiz Results as CSV
+      description: Triggers an async job to export quiz results and send an email when completed.
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: Export process started.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job_id:
+                    type: string
+        "404":
+          description: User not found.
+        "500":
+          description: Internal server error.
+
+  /download_report/{user_id}:
+    get:
+      summary: Download Monthly Report
+      description: Downloads the monthly report PDF for a user.
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: PDF file download.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Report not found.
+        "500":
+          description: Internal server error.
+
+  /download_csv/{filename}:
+    get:
+      summary: Download CSV File
+      description: Allows both Admin and User to download an exported CSV file.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download.
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found.
+
+  /export_status/{job_id}:
+    get:
+      summary: Check Export Status
+      description: Checks the status of a quiz export job.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Export completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  csv_url:
+                    type: string
+                    nullable: true
+        "202":
+          description: Export pending or processing.
+        "500":
+          description: Export failed.
+
+  /admin_export_quiz_csv:
+    post:
+      summary: Admin Export Quiz Results as CSV
+      description: Admin triggers an async job to export quiz results for all users.
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: Export process started.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job_id:
+                    type: string
+        "404":
+          description: Admin not found.
+        "500":
+          description: Internal server error.
+
+  /edit_quiz:
+    put:
+      summary: Edit a Quiz
+      description: Allows an admin to edit quiz details like name, date, and duration.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                quiz_name:
+                  type: string
+                  nullable: true
+                date_of_quiz:
+                  type: string
+                  format: date
+                  nullable: true
+                time_duration:
+                  type: integer
+                  nullable: true
+      responses:
+        "200":
+          description: Quiz updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  quiz:
+                    type: object
+        "400":
+          description: Invalid request data.
+        "401":
+          description: Unauthorized (only admins can access).
+        "404":
+          description: Quiz not found.
+
+  /delete_quiz/{quiz_id}:
+    delete:
+      summary: Delete a Quiz
+      description: Allows an admin to delete a quiz along with all its questions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: quiz_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Quiz deleted successfully.
+        "400":
+          description: Invalid quiz ID format.
+        "401":
+          description: Unauthorized (only admins can access).
+        "404":
+          description: Quiz not found.
+
+  /user/change_password:
+    post:
+      summary: Change User Password
+      description: Allows a user to update their password.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_password:
+                  type: string
+      responses:
+        "200":
+          description: Password updated successfully.
+        "400":
+          description: New password is required.
+        "404":
+          description: User not found.
+
+  /user/set_reminder:
+    post:
+      summary: Set User Reminder
+      description: Allows a user to set a daily reminder time for quiz notifications.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reminder_time:
+                  type: string
+                  example: "18:30"
+                  description: Time in HH:MM format
+      responses:
+        "200":
+          description: Reminder set successfully.
+        "400":
+          description: Reminder time is required or invalid format.
+        "401":
+          description: Unauthorized (only users can access).
+        "404":
+          description: User not found.
+
+  /get_user_profile_details:
+    get:
+      summary: Get User Profile Details
+      description: Retrieves the user's profile details.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  user_name:
+                    type: string
+                  user_email:
+                    type: string
+                  user_qualification:
+                    type: string
+                  user_dob:
+                    type: string
+                    format: date
+                  last_visited_time:
+                    type: string
+                    format: datetime
+        "401":
+          description: Unauthorized.
+        "404":
+          description: User not found.
+
+    put:
+      summary: Update User Profile
+      description: Allows users to update their profile details.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_name:
+                  type: string
+                user_qualification:
+                  type: string
+                user_dob:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Profile updated successfully.
+        "400":
+          description: No data provided.
+        "401":
+          description: Unauthorized.
+        "404":
+          description: User not found.
+
+  /user_dashboard:
+    get:
+      summary: Get User Dashboard Data
+      description: Fetches upcoming and expired quizzes for the logged-in user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of active and expired quizzes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active_quizzes:
+                    type: array
+                    items:
+                      type: object
+                  expired_quizzes:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          description: Unauthorized (only users can access).
+  /user_leaderboard:
+    get:
+      summary: Get User Leaderboard
+      description: Retrieves the top 10 users ranked by total score.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved leaderboard data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leaderboard:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_name:
+                          type: string
+                        total_score:
+                          type: integer
+        "401":
+          description: Unauthorized.
+        "404":
+          description: User not found.
+
+  /user_login:
+    post:
+      summary: User Login
+      description: Authenticates a user and returns an access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_email:
+                  type: string
+                  example: "user@example.com"
+                user_password:
+                  type: string
+                  example: "password123"
+      responses:
+        "200":
+          description: Successfully logged in.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  user_name:
+                    type: string
+                  user_email:
+                    type: string
+        "401":
+          description: Wrong password.
+        "404":
+          description: User not found.
+        "400":
+          description: No data provided.
+
+  /user_register:
+    post:
+      summary: User Registration
+      description: Registers a new user in the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_email:
+                  type: string
+                  example: "user@example.com"
+                user_password:
+                  type: string
+                  example: "password123"
+                user_name:
+                  type: string
+                  example: "John Doe"
+                user_qualification:
+                  type: string
+                  example: "B.Tech"
+                user_dob:
+                  type: string
+                  format: date
+                  example: "2000-05-15"
+      responses:
+        "200":
+          description: User successfully registered.
+        "400":
+          description: User already exists.
+
+  /quiz_management:
+    get:
+      summary: View All Quizzes
+      description: Retrieves a list of all quizzes.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved all quizzes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    quiz_name:
+                      type: string
+                    date_of_quiz:
+                      type: string
+                      format: date
+                    time_duration:
+                      type: integer
+        "401":
+          description: Unauthorized access (admin required).
+        "500":
+          description: Internal server error.
+
+  /add_quiz:
+    post:
+      summary: Add a New Quiz
+      description: Creates a new quiz under a specific chapter.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chapter_id:
+                  type: string
+                  format: uuid
+                quiz_name:
+                  type: string
+                date_of_quiz:
+                  type: string
+                  format: date
+                time_duration:
+                  type: integer
+      responses:
+        "201":
+          description: Quiz successfully added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  quiz_id:
+                    type: string
+                    format: uuid
+        "400":
+          description: Missing required fields.
+        "401":
+          description: Unauthorized access (admin required).
+        "500":
+          description: Internal server error.
+
+  /get_get_chapters:
+    get:
+      summary: Get All Chapters
+      description: Retrieves all chapters available in the system.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved chapters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    chapter_name:
+                      type: string
+        "401":
+          description: Unauthorized access (admin required).
+
+  /add_question:
+    post:
+      summary: Add a Question to a Quiz
+      description: Adds a new question to a specific quiz.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quiz_id:
+                  type: string
+                  format: uuid
+                question_statement:
+                  type: string
+                option1:
+                  type: string
+                option2:
+                  type: string
+                option3:
+                  type: string
+                option4:
+                  type: string
+                correct_option:
+                  type: integer
+      responses:
+        "201":
+          description: Question successfully added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  question:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      question_statement:
+                        type: string
+                      option1:
+                        type: string
+                      option2:
+                        type: string
+                      option3:
+                        type: string
+                      option4:
+                        type: string
+                      correct_option:
+                        type: integer
+        "400":
+          description: Invalid UUID format or missing data.
+        "401":
+          description: Unauthorized access (admin required).
+        "404":
+          description: Quiz not found.
+        "500":
+          description: Internal server error.
+
+  /get_chapter/{chapter_id}:
+    get:
+      summary: Get Chapter Details
+      description: Retrieves the name of a chapter by its ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chapter_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully retrieved chapter name.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chapter_name:
+                    type: string
+        "400":
+          description: Invalid UUID format.
+        "404":
+          description: Chapter not found.
+
+  /take_quiz/{quiz_id}:
+    get:
+      summary: Retrieve Quiz Questions
+      description: Fetches all questions for a given quiz.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: quiz_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully retrieved quiz questions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quiz_id:
+                    type: string
+                    format: uuid
+                  quiz_name:
+                    type: string
+                  time_duration:
+                    type: integer
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        question_statement:
+                          type: string
+                        option1:
+                          type: string
+                        option2:
+                          type: string
+                        option3:
+                          type: string
+                        option4:
+                          type: string
+                        correct_option:
+                          type: integer
+        "400":
+          description: Invalid UUID format.
+        "404":
+          description: Quiz not found.
+
+  /view_quiz_details/{quiz_id}:
+    get:
+      summary: View Quiz Details
+      description: Retrieves detailed information about a quiz, including subject and chapter details.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: quiz_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully retrieved quiz details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quiz_id:
+                    type: string
+                    format: uuid
+                  quiz_name:
+                    type: string
+                  date_of_quiz:
+                    type: string
+                    format: date
+                  time_duration:
+                    type: integer
+                  chapter_id:
+                    type: string
+                    format: uuid
+                  chapter_name:
+                    type: string
+                  subject_name:
+                    type: string
+        "400":
+          description: Invalid UUID format.
+        "404":
+          description: Quiz not found.
+
+  /manage_chapter_quizzes/{chapter_id}:
+    get:
+      summary: Get Quizzes for a Chapter
+      description: Retrieves all quizzes for a given chapter. Admin access required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chapter_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successfully retrieved quizzes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    quiz_name:
+                      type: string
+                    date_of_quiz:
+                      type: string
+                      format: date
+                    time_duration:
+                      type: integer
+        "401":
+          description: Unauthorized. Admin access required.
+        "500":
+          description: Server error.
+
+  /edit_question/{question_id}:
+    put:
+      summary: Edit a Question
+      description: Updates a question's details. Admin access required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question_statement:
+                  type: string
+                option1:
+                  type: string
+                option2:
+                  type: string
+                option3:
+                  type: string
+                option4:
+                  type: string
+                correct_option:
+                  type: integer
+      responses:
+        "200":
+          description: Question updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  question:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      question_statement:
+                        type: string
+                      option1:
+                        type: string
+                      option2:
+                        type: string
+                      option3:
+                        type: string
+                      option4:
+                        type: string
+                      correct_option:
+                        type: integer
+        "401":
+          description: Unauthorized. Admin access required.
+        "404":
+          description: Question not found.
+
+  /delete_question/{question_id}:
+    delete:
+      summary: Delete a Question
+      description: Deletes a question. Admin access required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Question deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "401":
+          description: Unauthorized. Admin access required.
+        "404":
+          description: Question not found.
+
+  /save_score:
+    post:
+      summary: Save Quiz Score
+      description: Saves the quiz score for a user. Requires JWT authentication.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quiz_id:
+                  type: string
+                  format: uuid
+                total_score:
+                  type: integer
+              required:
+                - quiz_id
+                - total_score
+      responses:
+        "201":
+          description: Score saved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Invalid quiz_id format.
+        "500":
+          description: Unexpected error.
+
+  /my_attempts:
+    get:
+      summary: Get User Quiz Attempts
+      description: Retrieves all quiz attempts for the logged-in user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved quiz attempts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    quiz_id:
+                      type: string
+                      format: uuid
+                    quiz_name:
+                      type: string
+                    highest_score:
+                      type: integer
+                    attempts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          time_of_attempt:
+                            type: string
+                            format: date-time
+                          total_score:
+                            type: integer
+        "401":
+          description: Unauthorized. User access required.
+
+  /user/scores:
+    get:
+      summary: Get User Scores
+      description: Fetches all quiz scores for the logged-in user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved scores.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    user_id:
+                      type: string
+                      format: uuid
+                    quiz_id:
+                      type: string
+                      format: uuid
+                    time_of_attempt:
+                      type: string
+                      format: date-time
+                    total_score:
+                      type: integer
+        "400":
+          description: Invalid User ID format.
+
+  /get_subject_wise_quiz_chart_data:
+    get:
+      summary: Get Subject-Wise Quiz Chart Data
+      description: Retrieves quiz attempt count grouped by subject for the logged-in user.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved subject-wise quiz data.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+        "401":
+          description: Unauthorized. User access required.
+
+  /get_month_wise_quiz_chart_data:
+    get:
+      summary: Get Month-Wise Quiz Chart Data
+      description: Retrieves the number of quiz attempts per month.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved month-wise quiz data.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+        "401":
+          description: Unauthorized access.
+
+  /admin_summary:
+    get:
+      summary: Admin Quiz Attempt Summary
+      description: Retrieves the number of attempts per quiz. Requires admin access.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved quiz attempt data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    quiz_name:
+                      type: string
+                    attempt_count:
+                      type: integer
+        "401":
+          description: Unauthorized. Admin access required.
+
+  /admin_summary2:
+    get:
+      summary: Admin Subject-Wise Top Scores
+      description: Retrieves the highest score achieved in each subject. Requires admin access.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved top scores.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    subject_name:
+                      type: string
+                    top_score:
+                      type: integer
+        "401":
+          description: Unauthorized. Admin access required.
+
+  /admin_summary3:
+    get:
+      summary: Admin Subject Attempt Summary
+      description: Retrieves the number of quiz attempts per subject. Requires admin access.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved subject-wise attempt data.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    subject_name:
+                      type: string
+                    attempt_count:
+                      type: integer
+        "401":
+          description: Unauthorized. Admin access required.
+
+  /admin_login:
+    post:
+      summary: Admin Login
+      description: Authenticates an admin and returns a JWT access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                admin_email:
+                  type: string
+                  format: email
+                admin_password:
+                  type: string
+                  format: password
+                admin_name:
+                  type: string
+      responses:
+        "200":
+          description: Successful login.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        "401":
+          description: Incorrect password.
+        "404":
+          description: Admin not found.
+        "400":
+          description: No data provided.
+
+  /admin_dashboard:
+    get:
+      summary: Admin Dashboard
+      description: Retrieves all users, subjects, and chapters. Requires admin access.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully retrieved dashboard data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                  subjects:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          description: Unauthorized. Only admins can access.
+
+  /create_subject:
+    post:
+      summary: Create Subject
+      description: Allows an admin to create a new subject.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject_name:
+                  type: string
+                subject_description:
+                  type: string
+      responses:
+        "201":
+          description: Subject created successfully.
+        "400":
+          description: Missing subject name.
+        "401":
+          description: Unauthorized. Only admins can create subjects.
+
+  /update_subject:
+    put:
+      summary: Update Subject
+      description: Allows an admin to update a subject's name and description.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject_id:
+                  type: string
+                  format: uuid
+                subject_name:
+                  type: string
+                subject_description:
+                  type: string
+      responses:
+        "200":
+          description: Subject updated successfully.
+        "400":
+          description: Missing or invalid subject ID.
+        "401":
+          description: Unauthorized. Only admins can update subjects.
+        "404":
+          description: Subject not found.
+
+  /delete_subject:
+    delete:
+      summary: Delete Subject
+      description: Allows an admin to delete a subject.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Subject deleted successfully.
+        "400":
+          description: Missing or invalid subject ID.
+        "401":
+          description: Unauthorized. Only admins can delete subjects.
+        "404":
+          description: Subject not found.
+
+  /create_chapter:
+    post:
+      summary: Create Chapter
+      description: Allows an admin to create a new chapter under a subject.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chapter_name:
+                  type: string
+                chapter_description:
+                  type: string
+                subject_id:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Chapter created successfully.
+        "400":
+          description: No data provided.
+        "401":
+          description: Unauthorized. Only admins can create chapters.
+        "402":
+          description: Chapter name is required.
+        "403":
+          description: Subject ID is required.
+        "404":
+          description: Invalid subject ID.
+        "405":
+          description: Subject not found.
+
+  /update_chapter:
+    put:
+      summary: Update Chapter
+      description: Allows an admin to update a chapter's name and description.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chapter_id:
+                  type: string
+                  format: uuid
+                chapter_name:
+                  type: string
+                chapter_description:
+                  type: string
+      responses:
+        "200":
+          description: Chapter updated successfully.
+        "400":
+          description: Missing or invalid chapter ID.
+        "401":
+          description: Unauthorized. Only admins can update chapters.
+        "404":
+          description: Chapter not found.
+
+  /delete_chapter:
+    delete:
+      summary: Delete Chapter
+      description: Allows an admin to delete a chapter.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chapter_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Chapter deleted successfully.
+        "400":
+          description: Missing or invalid chapter ID.
+        "401":
+          description: Unauthorized. Only admins can delete chapters.
+        "404":
+          description: Chapter not found.
+
+  /admin_logout:
+    post:
+      summary: Admin Logout
+      description: Logs out the admin by invalidating the JWT token on the frontend.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout successful.
+        "401":
+          description: Unauthorized. Only admins can log out.
+
+  /admin_search/{query}:
+    get:
+      summary: Admin Search
+      description: Allows an admin to search for users, subjects, quizzes, and questions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: query
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+        "401":
+          description: Unauthorized. Only admins can access this endpoint.
+
+  /user_search/{query}:
+    get:
+      summary: User Search
+      description: Allows users to search for subjects, chapters, quizzes, and questions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: query
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results returned successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    name:
+                      type: string
+                    chapters:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                    quizzes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+        "401":
+          description: Unauthorized. Only users can access this endpoint.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
